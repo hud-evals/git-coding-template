@@ -69,7 +69,8 @@ RUN apt-get update -y \
   libsecret-1-0 \
   libhyphen0 \
   libmanette-0.2-0 \
-  libgles2
+  libgles2 \
+  iverilog
 
 RUN update-ca-certificates
 
@@ -83,13 +84,6 @@ ENV HOME=/home/ubuntu
 RUN git config --global user.email "agent@example.com"
 RUN git config --global user.name "mr agent"
 
-# install elan
-RUN curl https://elan.lean-lang.org/elan-init.sh -sSf > /tmp/elan-init.sh && \
-    chmod +x /tmp/elan-init.sh && \
-    /tmp/elan-init.sh -y && \
-    rm /tmp/elan-init.sh
-ENV PATH="/home/ubuntu/.elan/bin:$PATH"
-RUN echo "PATH=/home/ubuntu/.elan/bin:$PATH" >> /home/ubuntu/.bash_profile
 
 # ========================= PROJECT SETUP =========================
 # CUSTOMIZE THIS SECTION FOR YOUR PROJECT
@@ -109,7 +103,7 @@ RUN echo "PATH=/home/ubuntu/.elan/bin:$PATH" >> /home/ubuntu/.bash_profile
 #     git clone https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/your-org/your-repo /home/ubuntu/[PROJECT_NAME]
 # Example for public repo:
 ENV random=random
-RUN git clone https://github.com/hud-evals/example-lean-codebase /home/ubuntu/example-lean-codebase
+RUN git clone https://github.com/hud-evals/example-verilog-codebase /home/ubuntu/example-verilog-codebase
 
 WORKDIR /home/ubuntu/example-lean-codebase
 
