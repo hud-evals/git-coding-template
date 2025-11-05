@@ -70,7 +70,8 @@ RUN apt-get update -y \
   libhyphen0 \
   libmanette-0.2-0 \
   libgles2 \
-  iverilog
+  iverilog \
+  verilator
 
 RUN update-ca-certificates
 
@@ -127,7 +128,7 @@ USER ubuntu
 RUN rm -rf .git && git init && git add . && git commit -m "Initial commit"
 
 # build the project
-RUN lake exe cache get && lake build
+RUN uv sync
 
 # Set environment variables
 ENV HOME=/home/ubuntu \

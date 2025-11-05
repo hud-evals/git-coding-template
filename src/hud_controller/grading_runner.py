@@ -87,10 +87,10 @@ class GradingRunner:
 
 
     def _get_build_command(self) -> list[str]:
-        return ["lake", "build"]
+        return ["uv", "sync"]
 
     def _get_test_command(self) -> list[str]:
-        return ["lake", "test"]
+        return ["uv", "run", "pytest"]
 
 
     def run_grading(self) -> tuple[bool, dict]:
