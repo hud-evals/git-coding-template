@@ -205,7 +205,7 @@ def validate_image(image: str, problem_id: str) -> bool:
         "docker",
         "run",
         "--rm",
-        "--network=none",
+        # "--network=none",
         image,
         "validate_problem",
         problem_id,
