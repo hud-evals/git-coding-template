@@ -13,7 +13,7 @@ class _BashSession:
 
     command: str = "/bin/bash"
     _output_delay: float = 0.2  # seconds
-    _timeout: float = 30.0  # seconds (30 seconds)
+    _timeout: float = 1500.0  # seconds (25 minutes) (long to allow for compiling jenkins)
     _sentinel: str = "<<exit>>"
 
     def __init__(self):

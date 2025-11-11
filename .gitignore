@@ -1,116 +1,64 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-.pytest_cache/
-.coverage
-*.cover
-.hypothesis/
-.env
-.venv
-env/
-venv/
-ENV/
+.gh_env
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
 
-# Node
-node_modules/
+# Testing
+/coverage
+
+# Next.js build output
+/.next/
+/out/
+
+# Production build files
+/build
+*.log
+
+# Static Site Generation and Server Side Rendering cache files
+.next/cache
+
+# Turborepo cache
+.turbo
+
+# Environment variables
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Log files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-package-lock.json
-yarn.lock
+pnpm-debug.log*
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# Editor directories and files
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
 .DS_Store
-.ck/
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Logs and temporary files
-*.log
-*.tmp
-*.temp
+.venv
+
+__pycache__
+
+*.sqlite
+
+setup_and_run_docker.sh
+
+problems-metadata.json
 logs/
-tmp/
-temp/
 
-# Docker
-docker_build.log
-backend.log
-
-# Test outputs
-qa_results/
-test_results/
-coverage/
-
-# Generated problem files we don't need (only keep hard/expert)
-src/hud_controller/extractors/codegen_*_very_easy.py
-src/hud_controller/extractors/codegen_*_easy.py
-src/hud_controller/extractors/codegen_*_easy_medium.py
-src/hud_controller/extractors/codegen_*_medium.py
-
-# Outline specific files we don't need
-outline_nologin/
-mitsushiba/
-autogenerate/
-problem_templates/
-test/
-test_data/
-
-# Scripts we don't need for codegen
-scripts/clean-json
-scripts/desktop-startup
-scripts/fix-database-encoding
-scripts/*.sh
-
-# Unnecessary directories
-taiga-frontend-enhanced-main/
-
-# Temporary files from outline-codegen
-outline-codegen/ideas/
-outline-codegen/output/
-outline-codegen/__pycache__/
-outline-codegen/src/__pycache__/
-
-# Temporary problem generation files
-codegen_problems_qa.json
-qa_summary.md
-test_codegen_simple.json
-final_*.json
-test_problems*.json
-local-hud.json
-remote-hud.json
-debug_codegen.py
-
-# Verification script
-test_setup.py
-
-# Keep only the important files
-!hard_expert_problems.json
-!test_strategies_summary.json
-!Dockerfile
-!pyproject.toml
-!outline-codegen/run_codegen_with_qa.py
-!outline-codegen/src/*.py
-
+.ck/

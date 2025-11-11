@@ -1,7 +1,7 @@
 import importlib
 import logging
 import pkgutil
-from defusedxml import ElementTree as ET
+import xml.etree.ElementTree as ET
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +12,7 @@ def import_submodules(module):
         importlib.import_module(module_name)
 
 
-def merge_junits(junit_xmls: list[str]) -> tuple[str, bool]:
+def merge_junits(junit_xmls: dict[str, str]) -> tuple[str, bool]:
     """
     Merge multiple JUnit XML strings into a single valid JUnit XML.
     
@@ -21,8 +21,12 @@ def merge_junits(junit_xmls: list[str]) -> tuple[str, bool]:
     under a single testsuites root element, along with a boolean indicating
     full success (no failures or errors).
     
+    junit_xmls is a dictionary of test kind to JUnit XML string.
+    Each testsuite will have its name attribute set to the corresponding
+    dictionary key.
+    
     Args:
-        junit_xmls: List of JUnit XML strings to merge
+        junit_xmls: Dictionary of test kind to JUnit XML string
         
     Returns:
         A tuple of (merged_junit_xml_string, full_success_boolean)
@@ -31,29 +35,6 @@ def merge_junits(junit_xmls: list[str]) -> tuple[str, bool]:
     if not junit_xmls:
         # Return empty JUnit XML if no inputs, considered success
         return '<?xml version="1.0" encoding="UTF-8"?>\n<testsuites></testsuites>', True
-    
-    # If only one XML, parse it to check for failures/errors
-    if len(junit_xmls) == 1:
-        xml_str = junit_xmls[0]
-        try:
-            root = ET.fromstring(xml_str)
-            total_failures = 0
-            total_errors = 0
-            
-            # Check all testsuites for failures/errors
-            testsuites = root.findall('.//testsuite')
-            if root.tag == 'testsuite':
-                testsuites.append(root)
-            
-            for testsuite in testsuites:
-                total_failures += int(testsuite.attrib.get('failures', 0))
-                total_errors += int(testsuite.attrib.get('errors', 0))
-            
-            full_success = (total_failures == 0 and total_errors == 0)
-            return xml_str, full_success
-        except ET.ParseError:
-            # If parsing fails, return as-is and assume failure
-            return xml_str, False
     
     # Create new root element for merged XML
     merged_root = ET.Element('testsuites')
@@ -66,7 +47,7 @@ def merge_junits(junit_xmls: list[str]) -> tuple[str, bool]:
     total_time = 0.0
     
     # Process each JUnit XML
-    for xml_str in junit_xmls:
+    for test_name, xml_str in junit_xmls.items():
         if not xml_str or not xml_str.strip():
             continue
             
@@ -86,9 +67,13 @@ def merge_junits(junit_xmls: list[str]) -> tuple[str, bool]:
                 # Clone the testsuite element to avoid modifying original
                 cloned_testsuite = ET.SubElement(merged_root, 'testsuite')
                 
-                # Copy all attributes
+                # Set the name attribute to the dictionary key
+                cloned_testsuite.set('name', test_name)
+                
+                # Copy all other attributes (this will override if 'name' was already present)
                 for key, value in testsuite.attrib.items():
-                    cloned_testsuite.set(key, value)
+                    if key != 'name':  # Skip name since we already set it
+                        cloned_testsuite.set(key, value)
                 
                 # Copy all child elements (testcases, properties, etc.)
                 for child in testsuite:

@@ -1,4 +1,5 @@
 type = process
-command = sudo -E -u ubuntu x11vnc -display :1 -forever -nopw -shared -rfbport 5900 -noshm
-depends-on = xvfb
+command=sudo -E -u ubuntu x11vnc -forever -shared
 logfile = /var/log/dinit/x11vnc.log
+waits-for = xvfb
+depends-on = xvfb

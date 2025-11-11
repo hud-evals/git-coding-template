@@ -1,9 +1,18 @@
 # syntax=docker/dockerfile:1
 FROM ubuntu:24.04 AS setup
 
-# Update and install core dependencies (including working Chromium browser)
+# ---------------------------------------------------------------------
+# 1) Add deadsnakes PPA so python3.11 exists
 RUN apt-get update -y \
-  && apt-get install -y --no-install-recommends \
+ && apt-get install -y --no-install-recommends software-properties-common \
+ && add-apt-repository -y ppa:deadsnakes/ppa \
+ && apt-get update -y
+
+# ---------------------------------------------------------------------
+# TODO: Remove most of these packages later
+# 2) Install all packages (pip fix: add python3-pip, then symlink pip → pip3)
+RUN apt-get install -y --no-install-recommends \
+  htop \
   vim \
   openssl \
   ca-certificates \
@@ -15,13 +24,13 @@ RUN apt-get update -y \
   novnc \
   x11vnc \
   xvfb \
-  python3 \
-  python3-pip \
-  python3-dev \
-  python3-tk \
-  python3-wheel \
-  python3-venv \
   xfce4 \
+  python3.11 \
+  python3.11-dev \
+  python3.11-venv \
+  python3.11-tk \
+  python3.11-distutils \
+  python3-pip \
   locales \
   libpq5 \
   sqlite3 \
@@ -40,10 +49,11 @@ RUN apt-get update -y \
   xauth \
   ffmpeg \
   nginx \
+  apache2 \
+  libapache2-mod-wsgi-py3 \
   gnupg \
-  gpg \ 
+  gpg \
   jq \
-  build-essential \
   python3 \
   make \
   gcc \
@@ -59,7 +69,7 @@ RUN apt-get update -y \
   libgtk-4-1 \
   libgraphene-1.0-0 \
   libwoff1 \
-  libevent-2.1-7 \
+  libevent-2.1-7t64 \
   libgstreamer-plugins-base1.0-0 \
   libgstreamer-plugins-good1.0-0 \
   libgstreamer-gl1.0-0 \
@@ -69,123 +79,127 @@ RUN apt-get update -y \
   libsecret-1-0 \
   libhyphen0 \
   libmanette-0.2-0 \
-  libgles2 \
-  iverilog \
-  verilator
+  libgles2
+
+# TODO: remove this after testing
+RUN echo "ubuntu ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+# make a `pip` alias for scripts that expect it
+RUN ln -sf /usr/bin/pip3 /usr/bin/pip
+
+# keep node-gyp on Python 3.11
+ENV npm_config_python=/usr/bin/python3.11
 
 RUN update-ca-certificates
 
-RUN pip install uv --break-system-packages
+# ---------------------------------------------------------------------
+# Install Chromium browser from Debian repos (has ARM64 support)
+RUN mkdir -p /etc/apt/keyrings && \
+    wget -q -O /etc/apt/keyrings/debian-archive-key.asc https://ftp-master.debian.org/keys/archive-key-12.asc && \
+    echo 'deb [signed-by=/etc/apt/keyrings/debian-archive-key.asc] http://deb.debian.org/debian bookworm main' > /etc/apt/sources.list.d/debian.list && \
+    apt-get update && \
+    apt-get install -y chromium chromium-driver && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# disable sandboxing for chromium (won't run in docker)
+RUN echo "export CHROMIUM_FLAGS=--no-sandbox" >> /etc/chromium.d/default-flags
+RUN mkdir -p /etc/chromium/policies/managed
+RUN echo '{ "DnsOverHttpsMode": "off", "DefaultPopupsSetting": 1, "SafeBrowsingProtectionLevel": 1 }' > /etc/chromium/policies/managed/policy.json
+
+
+# Install Chromium browser from Debian repos (has ARM64 support)
+RUN mkdir -p /etc/apt/keyrings && \
+    wget -q -O /etc/apt/keyrings/debian-archive-key.asc https://ftp-master.debian.org/keys/archive-key-12.asc && \
+    echo 'deb [signed-by=/etc/apt/keyrings/debian-archive-key.asc] http://deb.debian.org/debian bookworm main' > /etc/apt/sources.list.d/debian.list && \
+    apt-get update && \
+    apt-get install -y chromium chromium-driver && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# disable sandboxing for chromium (won't run in docker)
+RUN echo "export CHROMIUM_FLAGS=--no-sandbox" >> /etc/chromium.d/default-flags
+# disable dns over https (so we can mock websites)
+RUN mkdir -p /etc/chromium/policies/managed
+# note that this is edited during startup to append insecure sites as secure
+RUN echo '{ "DnsOverHttpsMode": "off", "DefaultPopupsSetting": 1, "SafeBrowsingProtectionLevel": 1 }' > /etc/chromium/policies/managed/policy.json
 
 WORKDIR /
-
-# Install nvm for ubuntu user
-USER ubuntu
-ENV HOME=/home/ubuntu
-
-# configure git
-RUN git config --global user.email "agent@example.com"
-RUN git config --global user.name "mr agent"
-
-
-# ========================= PROJECT SETUP =========================
-# CUSTOMIZE THIS SECTION FOR YOUR PROJECT
-# This example shows Node.js/TypeScript setup. Adapt for your tech stack.
-# Examples: Python (pip/poetry), Java (Maven/Gradle), C++ (CMake), Rust (Cargo)
-# =================================================================
-
-
-
-# 0) Clone or copy your project repository
-# Replace with your repo URL and credentials if needed
-# ENV GITHUB_TOKEN_BASE64=[YOUR_GITHUB_TOKEN_BASE64]
-# ENV GITHUB_USERNAME=[YOUR_GITHUB_USERNAME]
-# Example for private repo:
-# RUN cd /home/ubuntu && \
-#     GITHUB_TOKEN=$(echo "$GITHUB_TOKEN_BASE64" | base64 -d); \
-#     git clone https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/your-org/your-repo /home/ubuntu/[PROJECT_NAME]
-# Example for public repo:
-ENV random=random1
-RUN git clone https://github.com/hud-evals/example-verilog-codebase /home/ubuntu/example-verilog-codebase
-
-WORKDIR /home/ubuntu/example-verilog-codebase
-
-# Checkout branches for testing (baseline, test, golden)
-ARG TEST_BRANCH
-ARG GOLDEN_BRANCH
-ARG BASELINE_BRANCH
-RUN git checkout $BASELINE_BRANCH && \
-    git checkout $TEST_BRANCH && \
-    git checkout $GOLDEN_BRANCH && \
-    git checkout $BASELINE_BRANCH
-
-# Generate patches for grading
-USER root
-RUN mkdir -p /home/root && \
-    sudo -u ubuntu git diff $BASELINE_BRANCH $TEST_BRANCH > /home/root/test.patch && \
-    sudo -u ubuntu git diff $BASELINE_BRANCH $GOLDEN_BRANCH > /home/root/golden.patch
-USER ubuntu
-
-# Overwrite git history to avoid leaking info
-RUN rm -rf .git && git init && git add . && git commit -m "Initial commit"
-
-# build the project
-RUN uv sync
-
-# Set environment variables
-ENV HOME=/home/ubuntu \
-    DEBIAN_FRONTEND=noninteractive \
-    DISPLAY=:1.0 \
-    DISPLAY_WIDTH=1280 \
-    DISPLAY_HEIGHT=800
-
-EXPOSE 6080
-
-# supress AT-SPI errors
-ENV NO_AT_BRIDGE=1
-USER root
+RUN chmod 777 /usr/local/bin
 
 # Setup and start dinit
 COPY dinit.d/ /etc/dinit.d/
 RUN mkdir -p /var/log/dinit && chmod 755 /var/log/dinit
 
-# Postgres config:
-ENV POSTGRES_USER=ubuntu
-ENV POSTGRES_PASSWORD=ubuntu
-ENV POSTGRES_DB=ubuntu
+# Install nvm for ubuntu user
+USER ubuntu
+ENV HOME=/home/ubuntu \
+    NVM_DIR=/home/ubuntu/.nvm
 
-# ================================ hud evals mcp server setup ================================================
+# Install latest nvm (v0.39.7) <TEMPLATE> language
+# RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+# ------------------------- <TEMPLATE> setup -------------------------
+
+# configure git
+RUN git config --global user.email "agent@example.com" && \
+    git config --global user.name "mr agent"
+
+# Clone ClickHouse repository
+ENV REPO_VERSION=1.0
+WORKDIR /home/ubuntu
+RUN git clone https://github.com/ClickHouse/ClickHouse.git;
+
+WORKDIR /home/ubuntu/ClickHouse
+
+USER ubuntu
+WORKDIR /
+
+# Set environment variables
+ENV HOME=/home/ubuntu \
+    DEBIAN_FRONTEND=noninteractive \
+    DISPLAY=:1.0 \
+    DISPLAY_WIDTH=1400 \
+    DISPLAY_HEIGHT=850
+
+EXPOSE 6080
+
+# supress AT-SPI errors
+ENV NO_AT_BRIDGE=1
+
+# ================================================ MCP SERVER SETUP ================================================
 FROM setup AS runtime
 
-# prepare for the hud evals mcp server
+USER root
+
+ENV WIDTH=1400 \
+    HEIGHT=850 \
+    DISPLAY_NUM=1 \
+    SCREENSHOT_DIR=/home/ubuntu/screenshots \
+    DOWNLOADS_DIR=/home/ubuntu/Downloads \
+    RUST_LOG=warn
+RUN mkdir -p /home/ubuntu/screenshots && chmod 777 /home/ubuntu/screenshots && \
+    mkdir -p /home/ubuntu/Downloads && chmod 777 /home/ubuntu/Downloads && \
+    chmod 777 /home/ubuntu/Downloads && \
+    chmod 777 /root
+
+# prepare for the mcp server
+RUN pip install uv --break-system-packages
 
 # copy python files
 COPY ./src /mcp_server/src
 COPY ./pyproject.toml /mcp_server/pyproject.toml
 COPY ./README.md /mcp_server/README.md
 
-ENV RUST_LOG=warn
-RUN cd /mcp_server && uv venv && . .venv/bin/activate && uv sync && uv pip install -e . 
+RUN cd /mcp_server && uv venv && . .venv/bin/activate && uv sync && uv pip install -e .
 ENV PYTHONPATH=/mcp_server/.venv/lib/python3.10/site-packages
 ENV PATH=/mcp_server/.venv/bin:$PATH
 
-ENV WIDTH=1280
-ENV HEIGHT=800
-ENV DISPLAY_NUM=1
-RUN mkdir -p /home/ubuntu/screenshots
-RUN chmod 777 /home/ubuntu/screenshots
-ENV SCREENSHOT_DIR=/home/ubuntu/screenshots
-RUN mkdir -p /home/ubuntu/Downloads
-RUN chmod 777 /home/ubuntu/Downloads
-
-RUN chmod 777 /root
-
 EXPOSE 6080 3000
+
+ARG PROBLEM_ID=<TEMPLATE>
+ENV PROBLEM_ID=$PROBLEM_ID
 
 ARG HINTS="none"
 ENV HINTS=$HINTS
 
-ARG PROBLEM_ID
-ENV PROBLEM_ID=$PROBLEM_ID
-
-CMD ["hud_eval"]
+CMD ["tail", "-f", "/dev/null"]

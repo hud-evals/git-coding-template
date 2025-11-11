@@ -34,8 +34,8 @@ from typing import Literal, get_args
 # Ensure MCP tools do not load during import
 os.environ["MCP_TESTING_MODE"] = "0"
 
-from hud_controller.app import spec_to_statement
 import hud_controller.problems
+from hud_controller.app import spec_to_statement
 from hud_controller.spec import PROBLEM_REGISTRY, ReviewLevel
 from hud_controller.utils import import_submodules
 
@@ -172,9 +172,6 @@ def run_command(cmd: list[str], prefix: str) -> int:
 
 def build_image(
     image: str,
-    baseline_branch: str,
-    test_branch: str,
-    golden_branch: str,
     context_dir: str,
     *,
     hints: str,
@@ -188,18 +185,12 @@ def build_image(
         "--build-arg",
         f"PROBLEM_ID={problem_id}",
         "--build-arg",
-        f"BASELINE_BRANCH={baseline_branch}",
-        "--build-arg",
-        f"TEST_BRANCH={test_branch}",
-        "--build-arg",
-        f"GOLDEN_BRANCH={golden_branch}",
-        "--build-arg",
         f"HINTS={hints}",
         "--add-host=host.docker.internal:172.17.0.1",
         context_dir,
     ]
     logger.info(
-        f"Building image {image} (BASELINE_BRANCH={baseline_branch}, TEST_BRANCH={test_branch}, GOLDEN_BRANCH={golden_branch}, HINTS={hints}, PROBLEM_ID={problem_id})"
+        f"Building image {image} (HINTS={hints}, PROBLEM_ID={problem_id})"
     )
     rc = run_command(cmd, prefix=f"[build {image}] ")
     if rc != 0:

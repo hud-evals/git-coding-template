@@ -19,8 +19,8 @@ class Service:
 
     name: str
     type: str = "process"  # process | scripted | internal
-    command: Optional[str] = None
-    logfile: Optional[str] = None
+    command: str | None = None
+    logfile: str | None = None
     depends_on: list[str] = field(default_factory=list)
 
 
