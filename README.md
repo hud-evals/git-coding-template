@@ -15,7 +15,7 @@ This is a template framework for creating and evaluating AI agent tasks. It prov
 ├── src/hud_controller/          # Main framework code
 │   ├── app.py                   # Main MCP server and entry points
 │   ├── spec.py                  # Core specifications (Problem, Grade, Grader)
-│   ├── grading_runner.py        # Test execution and grading logic
+│   ├── graders.py               # Grading logic
 │   ├── utils.py                 # Utility functions
 │   ├── setup.py                 # Environment setup
 │   ├── problems/                # Task definitions by difficulty
@@ -34,97 +34,115 @@ This is a template framework for creating and evaluating AI agent tasks. It prov
 
 ### 1. Problem Definition
 
-Problems are defined using the `ProblemSpec` data class with these key fields:
+Problems are defined using the `@problem` annotation with these key fields:
 
 ```python
-    ProblemSpec(
-        id="simple_counter", # the unique ID of the problem
-        description="""Please implement a simple synchronous counter that with reset, enable, and load functionality.
-Inputs:
-clk - Clock signal (triggers on rising edge)
-rst - Synchronous reset signal
-ena - Enable signal (allows counting)
-set - Load signal (sets counter to a specific value)
-din - 8-bit data input (value to load when set is high)
-Output:
-counter - 8-bit counter value        
-        
-""", # What you want the agent to do
-        difficulty="easy", # how difficult the problem is
-        # the branch names
-        base="simple_counter_baseline", 
-        test="simple_counter_test",
-        golden="simple_counter_golden",
-        test_files=["tests/test_simple_counter_hidden.py"]
-    )
+@problem(
+    id="squash-commits-first-parent", # the problem id (required)
+    description="Squash all commits in `master` after `2d0bfff1ffba4a6ac8ee3fbcff7f7624cf2f0f16` (following first-parent history) into a single commit.", # the prompt for the agent
+    hints=[], # any hints you want to give
+    difficulty="easy",
+    task_type="git",
+    review_level="no-review",
+    base="cafc904fc34cc78e51c459ea86dd981486ae0589", # how to initialize the agent
+    test_files=None,
+    golden=[ # the golden sequence of commands to get to the desired end state. Needed for validation
+        "cd /home/ubuntu/ClickHouse",
+        "GIT_SEQUENCE_EDITOR='sed -i \"2,\\$s/^pick/squash/\"' GIT_EDITOR='sed -i \"1s/.*/Squashed commits/; 2,\\$d\"' git rebase -i 2d0bfff1ffba4a6ac8ee3fbcff7f7624cf2f0f16",
+    ],
+)
+def git_squash_commits_first_parent(state: Config) -> Grade:
+    """
+    Grade the git squash commits task using first-parent counting.
+
+    Validates that the agent properly squashed 5 commits into 1 using interactive rebase.
+    Uses --first-parent to count commits (matching git rebase -i HEAD~5 behavior).
+
+    Checks:
+    - Tree hash matches (files are correct after squash)
+    - Only 1 commit exists since HEAD~5 on first-parent line
+    """
+    return Grade.from_subscores([
+        GitGrader.grade(
+            state=state,
+            working_dir="/home/ubuntu/ClickHouse",
+            expected_tree_hash="97f674f0359a4dfb3fb815bda90b105ca3b12413",
+            expected_commit_count=1,
+            base_commit="2d0bfff1ffba4a6ac8ee3fbcff7f7624cf2f0f16",
+            first_parent=True,
+            weight=1.0,
+        ),
+    ])
 ```
-
-### 2. Test-Based Validation
-
-Tasks are graded by:
-1. Copying the repository (including whatever changes the agent made) to a clean workspace
-2. Applying the agent's solution patch
-3. Applying a test patch on top of what the agent did (adds tests that would fail in an unmodified repo)
-4. Running `pytest <test files>` to test the build 
 
 ## Creating New Tasks
 
-### Step 1: Prepare Git Branches
+### Step 1: Prepare Git Repository
 
-You need three branches in your target repository:
-
-1. **baseline** - Starting state with the bug/missing feature
-2. **test** - Adds tests that should fail on baseline, and pass in golden branch
-3. **golden** - Contains the correct solution (for reference). Notably, this should not contain the tests.
+You'll need to prepare a git repository with a desired starting state and ideally a desired end state. 
+The start state is represented by the `base` field in the @problem. The end state is represented by the tree hash at the end.
 
 ### Step 2: Define the Task
 
-We currently only have src/hud_controller/problems/basic.py, but feel free to make more files in the subdirectory.
+We currently only have src/hud_controller/problems/tasks.py, but feel free to make more files in the subdirectory.
 Once you do that, you can add a problem to the registry as follows:
 
 ```python
-PROBLEM_REGISTRY.append(
-    ProblemSpec(
-        id="simple_counter",
-        description="""Please implement a simple synchronous counter that with reset, enable, and load functionality.
-Inputs:
-clk - Clock signal (triggers on rising edge)
-rst - Synchronous reset signal
-ena - Enable signal (allows counting)
-set - Load signal (sets counter to a specific value)
-din - 8-bit data input (value to load when set is high)
-Output:
-counter - 8-bit counter value        
-        
-""",
-        difficulty="easy",
-        base="simple_counter_baseline",
-        test="simple_counter_test",
-        golden="simple_counter_golden",
-        test_files=["tests/test_simple_counter_hidden.py"],
-    )
+@problem(
+    id="squash-commits-first-parent", # the problem id (required)
+    description="Squash all commits in `master` after `2d0bfff1ffba4a6ac8ee3fbcff7f7624cf2f0f16` (following first-parent history) into a single commit.", # the prompt for the agent
+    hints=[], # any hints you want to give
+    difficulty="easy",
+    task_type="git",
+    review_level="no-review",
+    base="cafc904fc34cc78e51c459ea86dd981486ae0589", # how to initialize the agent
+    test_files=None,
+    golden=[ # the golden sequence of commands to get to the desired end state. Needed for validation
+        "cd /home/ubuntu/ClickHouse",
+        "GIT_SEQUENCE_EDITOR='sed -i \"2,\\$s/^pick/squash/\"' GIT_EDITOR='sed -i \"1s/.*/Squashed commits/; 2,\\$d\"' git rebase -i 2d0bfff1ffba4a6ac8ee3fbcff7f7624cf2f0f16",
+    ],
 )
+def git_squash_commits_first_parent(state: Config) -> Grade:
+    """
+    Grade the git squash commits task using first-parent counting.
+
+    Validates that the agent properly squashed 5 commits into 1 using interactive rebase.
+    Uses --first-parent to count commits (matching git rebase -i HEAD~5 behavior).
+
+    Checks:
+    - Tree hash matches (files are correct after squash)
+    - Only 1 commit exists since HEAD~5 on first-parent line
+    """
+
+    # you can theoretically use multiple subgraders, but we reccomend only using gitgrader
+    return Grade.from_subscores([
+        GitGrader.grade(
+            state=state,
+            working_dir="/home/ubuntu/ClickHouse",
+            expected_tree_hash="97f674f0359a4dfb3fb815bda90b105ca3b12413",
+            expected_commit_count=1,
+            base_commit="2d0bfff1ffba4a6ac8ee3fbcff7f7624cf2f0f16",
+            first_parent=True,
+            weight=1.0,
+        ),
+    ])
 ```
-
-The base, test, and golden branches must correspond to the branches you created in the first step. 
-
 ### Step 3: Validate your problem
 
 It's important to ensure that your problems pass a basic sanity check:
-* All tests at the baseline branch should pass
-* When we apply the hidden test set, the hidden tests should fail
-* When we apply the golden patch and then apply the hidden test set, all tests should pass
+* Before the golden commands are appleid, the grader should fail.
+* After the commands are applied, the grader should pass
 
 To help you with this, we have a script called `utils/imagectl3.py`.
 
 To run and build the images you can do:
 ```bash
-uv run utils/imagectl3.py --build --validate
+uv run utils/imagectl3.py git_ --build --validate
 ```
 You can specify the exact image you want to test with the `--ids` flag. 
 You can also make this easier to type by using the shorform `-b` flag for `--build` and the shortform `-v` flag for `--validate`.
 ```bash
-uv run utils/imagectl3.py -bv --ids simple_counter
+uv run utils/imagectl3.py git_ -bv --ids squash-commits-first-parent
 ```
 Note: ensure your image is built before you try to validate it.
 
@@ -138,12 +156,12 @@ uv sync
 ### Build, Validate all problems and generate Json
 
 ```bash
-uv run utils/imagectl3.py lean_ -bvj
+uv run utils/imagectl3.py git_ -bvj
 ```
-This will build all the docker images, with the prefix `lean_` and then run the validation workflow. 
+This will build all the docker images, with the prefix `git_` and then run the validation workflow. 
 Once you get a lot of problems, you'll find it helpful to do building and validation in parallel with `--jobs`:
 ```bash
-uv run utils/imagectl3.py lean_ -bvj --jobs 4
+uv run utils/imagectl3.py git_ -bvj --jobs 4
 ```
 
 ### Run hud eval locally
@@ -157,7 +175,7 @@ You can run them remotely too! However, you'll need to push the images. T
 To make this easier, we have the `--push` or `-p` flag in imagectl3. 
 Note that we also change the image prefix to make it pushable to docker hub.
 ```bash
-uv run utils/imagectl3.py govindhud/lean_ -bvjp --jobs 4
+uv run utils/imagectl3.py govindhud/git_ -bvjp --jobs 4
 ```
 Once all images are pushed, we can:
 ```
@@ -172,36 +190,10 @@ uv run hud remote-hud.json claude --max-steps 50
 Key environment variables used by the grading system:
 
 - `MCP_TESTING_MODE` - Enable testing tools (default: "1")
-- `NODE_ENV` - Node environment (set to "test" for testing)
-- `WEBHOOK_FAILURE_TIME_WINDOW` - Example task-specific config
-- `WEBHOOK_FAILURE_RATE_THRESHOLD` - Example task-specific config
 
 ### Docker Configuration
 
 The included `Dockerfile` sets up the complete environment:
 - Base system with required tools
-- Lean
 - VNC for GUI testing (if needed)
 
-
-## Best Practices
-
-### Task Design
-
-1. **Clear Descriptions**: Provide detailed, unambiguous task descriptions
-2. **Focused Scope**: Each task should test one concept or skill
-3. **Realistic Scenarios**: Base tasks on real-world debugging/development scenarios
-4. **Fair Hints**: If providing hints, ensure they guide without giving away the solution
-
-### Test Design
-
-1. **Comprehensive Coverage**: Tests should fully validate the requirement
-2. **Clear Failures**: Test failures should clearly indicate what's wrong
-3. **Minimal Changes**: Test patches should only add tests, not modify existing code
-4. **Isolation**: Tests should not depend on external state
-
-### Branch Management
-
-1. **Clean Baseline**: Baseline should be stable and buildable
-2. **Minimal Test Patch**: Only add tests that verify the specific requirement
-3. **Correct Golden**: Golden solution should be minimal and idiomatic
