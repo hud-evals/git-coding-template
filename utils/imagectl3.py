@@ -112,9 +112,6 @@ class ProcessedSpec:
     id: str
     description: str
     image: str
-    base: str
-    test: str
-    golden: str
     hints: Literal["none", "all"]
 
 
@@ -144,9 +141,6 @@ def filter_specs(args: argparse.Namespace) -> list[ProcessedSpec]:
             id=spec.id,
             description=spec.description,
             image=image_base + spec.id,
-            base=spec.base,
-            test=spec.test,
-            golden=spec.golden,
             hints=getattr(args, "hints", "none"),
         )
 
@@ -342,9 +336,6 @@ def run_pipeline(
             image = spec.image
             ok = build_image(
                 image=image,
-                baseline_branch=spec.base,
-                test_branch=spec.test,
-                golden_branch=spec.golden,
                 context_dir=context_dir,
                 hints=spec.hints,
                 problem_id=spec.id,
