@@ -180,7 +180,6 @@ def build_image(
         f"PROBLEM_ID={problem_id}",
         "--build-arg",
         f"HINTS={hints}",
-        "--add-host=host.docker.internal:172.17.0.1",
         context_dir,
     ]
     logger.info(

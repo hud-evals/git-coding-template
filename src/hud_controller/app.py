@@ -27,7 +27,6 @@ WORKSPACE_DIR: Optional[str] = None
 REUSE_WORKSPACE: bool = False
 EXTRA_LOGGING: bool = False
 
-os.environ["HOME"] = "/home/ubuntu"
 
 
 def _truthy(s: str | None) -> bool:
@@ -35,6 +34,7 @@ def _truthy(s: str | None) -> bool:
 
 
 def configure_logging(enable_extra: bool = False) -> None:
+    os.environ["HOME"] = "/home/ubuntu"
     """Configure colorized logging for CLI runs."""
     level = logging.DEBUG if enable_extra else logging.INFO
     root = logging.getLogger()
