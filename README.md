@@ -167,7 +167,7 @@ uv run utils/imagectl3.py git_ -bvj --jobs 4
 ### Run hud eval locally
 You can run the images locally with:
 ```
-uv run hud local-hud.json claude --max-steps 50
+uv run hud eval local-hud.json claude --max-steps 50
 ```
 
 ### Run hud eval remotely
@@ -179,7 +179,7 @@ uv run utils/imagectl3.py govindhud/git_ -bvjp --jobs 4
 ```
 Once all images are pushed, we can:
 ```
-uv run hud remote-hud.json claude --max-steps 50
+uv run hud eval remote-hud.json claude --max-steps 50
 ```
 
 
