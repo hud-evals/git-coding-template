@@ -64,3 +64,4 @@ remote-hud.json
 logs/
 
 .ck/
+.env

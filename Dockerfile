@@ -202,4 +202,4 @@ ENV PROBLEM_ID=$PROBLEM_ID
 ARG HINTS="none"
 ENV HINTS=$HINTS
 
-CMD ["tail", "-f", "/dev/null"]
+CMD ["hud_eval"]
