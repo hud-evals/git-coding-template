@@ -222,7 +222,7 @@ def validate_image(image: str, problem_id: str) -> bool:
 
 def push_image(image: str) -> bool:
     logger.info(f"Pushing image {image}")
-    rc = run_command(["docker", "push", image], prefix=f"[push  {image}] ")
+    rc = run_command(["docker", "push", "--platform", "linux/amd64", image], prefix=f"[push  {image}] ")
     if rc != 0:
         logger.error(f"Push failed for {image} (exit code {rc})")
         return False
