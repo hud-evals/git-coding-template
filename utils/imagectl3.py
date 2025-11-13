@@ -176,6 +176,8 @@ def build_image(
         "build",
         "-t",
         image,
+        "--platform",
+        "linux/amd64",
         "--build-arg",
         f"PROBLEM_ID={problem_id}",
         "--build-arg",
