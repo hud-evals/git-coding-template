@@ -5,11 +5,9 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
 
 import click
-from mcp.server.fastmcp import FastMCP  # type: ignore
-from mcp.types import ImageContent, TextContent  # type: ignore
+from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
 import hud_controller.problems
@@ -23,7 +21,7 @@ logger = logging.getLogger(__name__)
 ONLY_SERVER = False
 
 # NEW: workspace reuse controls (consumed by graders.AgentPatchGrader via import)
-WORKSPACE_DIR: Optional[str] = None
+WORKSPACE_DIR: str | None = None
 REUSE_WORKSPACE: bool = False
 EXTRA_LOGGING: bool = False
 
